@@ -1,22 +1,20 @@
 # =============================================
 # Dockerfile - Ubuntu 24.04 com SSH + OpenLDAP
 # Mantenedor: Luiz Claubert <luizclaubertss@gmail.com>
-# Versão: v0.3
+# Versão: v0.4
 # =============================================
 
 ARG TAG=24.04
 FROM ubuntu:${TAG}
 
 LABEL maintainer="Luiz Claubert <luizclaubertss@gmail.com>"
-LABEL version="v0.3"
+LABEL version="v0.4"
 LABEL description="Ubuntu 24.04 com SSH e OpenLDAP (usuário Charlie pré-cadastrado)"
 
-# Evita prompts interativos durante a instalação
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Sao_Paulo
 ENV LANG=pt_BR.UTF-8
 
-# Atualiza pacotes e instala o necessário
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         sudo \
@@ -25,8 +23,6 @@ RUN apt-get update && \
         ldap-utils \
         vim \
         nano \
-        curl \
-        wget \
         net-tools \
         iproute2 \
         language-pack-pt \
@@ -34,25 +30,20 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
-# Configura locale em português
+# Configura locale
 RUN update-locale LANG=pt_BR.UTF-8
 
 # ==================== CONFIGURAÇÃO SSH ====================
 RUN mkdir -p /var/run/sshd && \
-    # Cria usuário 'aluno' com senha 'rnpesr' e privilégios sudo
     useradd -m -s /bin/bash aluno && \
     echo "aluno:rnpesr" | chpasswd && \
     usermod -aG sudo aluno && \
-    # Senha do root
     echo "root:rnpesr" | chpasswd && \
-    # Configurações de segurança SSH (permite login com senha)
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/' /etc/ssh/sshd_config
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
 # ==================== CONFIGURAÇÃO OPENLDAP ====================
-# Configuração non-interactive do slapd + criação da base
 RUN echo "slapd slapd/internal/generated_adminpw password admin" | debconf-set-selections && \
     echo "slapd slapd/password1 password admin" | debconf-set-selections && \
     echo "slapd slapd/password2 password admin" | debconf-set-selections && \
@@ -60,35 +51,10 @@ RUN echo "slapd slapd/internal/generated_adminpw password admin" | debconf-set-s
     echo "slapd shared/organization string Example" | debconf-set-selections && \
     dpkg-reconfigure -f noninteractive slapd
 
-# Cria o usuário Charlie (senha: passwd) na base LDAP
-RUN ldapadd -Y EXTERNAL -H ldapi:/// -f /dev/stdin <<EOF
-dn: ou=people,dc=example,dc=local
-objectClass: organizationalUnit
-ou: people
-
-dn: uid=charlie,ou=people,dc=example,dc=local
-objectClass: inetOrgPerson
-objectClass: posixAccount
-objectClass: shadowAccount
-uid: charlie
-sn: Charlie
-givenName: Charlie
-cn: Charlie
-displayName: Charlie
-uidNumber: 1001
-gidNumber: 1001
-homeDirectory: /home/charlie
-userPassword: passwd
-EOF
-
-# Copia o entrypoint
+# Copia entrypoint
 COPY entrypoint.sh /usr/bin/entrypoint
 RUN chmod +x /usr/bin/entrypoint
 
-# Expõe apenas a porta SSH (LDAP usa ldapi:/// internamente e porta 389 se necessário)
 EXPOSE 22/tcp
-
-# Limpeza final
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/usr/bin/entrypoint"]
