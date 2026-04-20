@@ -31,12 +31,14 @@ RUN update-locale LANG=pt_BR.UTF-8
 
 # ==================== CONFIGURAÇÃO SSH ====================
 RUN mkdir /var/run/sshd && \
-    # Cria usuário 'aluno' (mantido do original)
+    # Cria usuário 'aluno' e acesso sudo
     useradd -m -s /bin/bash aluno && \
     echo "aluno:rnpesr" | chpasswd && \
     usermod -aG sudo aluno && \
+
     # Senha do root
     echo "root:rnpesr" | chpasswd && \
+
     # Permite login com senha via SSH
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
