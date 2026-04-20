@@ -7,7 +7,7 @@ As instruções para cada ferramenta estão em suas respectivas pastas
 Iniciar os serviços:
 ```bash
 docker-compose up -d
-```bash
+```
 
 Parar os Serviços:
 ```bash
