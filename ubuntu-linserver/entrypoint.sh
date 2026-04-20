@@ -20,27 +20,39 @@ if ! id aluno >/dev/null 2>&1; then
 fi
 
 # ==================== OpenLDAP ====================
-echo "Iniciando serviço OpenLDAP (slapd)..."
-service slapd start
+echo "Inicializando OpenLDAP (slapd)..."
 
-# Aguarda o LDAP ficar pronto
+if ! pgrep slapd > /dev/null; then
+    service slapd start
+else
+    echo "slapd já está em execução."
+fi
+
 echo "Aguardando LDAP inicializar..."
 for i in {1..30}; do
-    if ldapsearch -Y EXTERNAL -H ldapi:/// -b "" -s base > /dev/null 2>&1; then
+    if ldapsearch -Y EXTERNAL -H ldapi:/// -b "" -s base dn > /dev/null 2>&1; then
         echo "LDAP pronto!"
         break
     fi
     sleep 1
 done
 
-# Cria o usuário Charlie (executa apenas na primeira inicialização)
-if ! ldapsearch -x -H ldapi:/// -b "dc=example,dc=local" "(uid=charlie)" > /dev/null 2>&1; then
-    echo "Criando usuário Charlie no LDAP..."
+# Criar OU se não existir
+if ! ldapsearch -x -H ldapi:/// -b "dc=example,dc=local" "(ou=people)" | grep -q "dn:"; then
+    echo "Criando OU people..."
     ldapadd -Y EXTERNAL -H ldapi:/// <<EOF
 dn: ou=people,dc=example,dc=local
 objectClass: organizationalUnit
 ou: people
+EOF
+fi
 
+# Criar usuário Charlie se não existir
+if ! ldapsearch -x -H ldapi:/// -b "dc=example,dc=local" "(uid=charlie)" | grep -q "dn:"; then
+    echo "Criando usuário Charlie no LDAP..."
+    HASH=$(slappasswd -s passwd)
+
+    ldapadd -Y EXTERNAL -H ldapi:/// <<EOF
 dn: uid=charlie,ou=people,dc=example,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
@@ -53,13 +65,10 @@ displayName: Charlie
 uidNumber: 1001
 gidNumber: 1001
 homeDirectory: /home/charlie
-userPassword: passwd
+userPassword: $HASH
 EOF
-    echo "Usuário Charlie criado com sucesso (senha: passwd)"
+
+    echo "Usuário Charlie criado com sucesso"
 else
     echo "Usuário Charlie já existe."
 fi
-
-# Mantém o container rodando com SSH em foreground
-echo "Iniciando SSH em foreground..."
-exec /usr/sbin/sshd -D -e
