@@ -6,17 +6,17 @@ As instruções para cada ferramenta estão em suas respectivas pastas
 ## Comandos para gerenciar o container
 Iniciar os serviços:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Parar os Serviços:
 ```bash
-docker-compose down
+docker compose down
 ```
 
 Verificar Logs:
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 Para acessar a console de determinado contêiner
