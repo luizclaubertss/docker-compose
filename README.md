@@ -4,6 +4,11 @@ Repositório criado para consolidar arquivos docker-compose para testar ferramen
 As instruções para cada ferramenta estão em suas respectivas pastas
 
 ## Comandos para gerenciar o container
+Acesse a pasta onde estão os arquivos do seu container, por exemplo:
+```bash
+cd ~/docker-projects/graylog2/open-core
+```
+
 Iniciar os serviços:
 ```bash
 docker compose up -d
